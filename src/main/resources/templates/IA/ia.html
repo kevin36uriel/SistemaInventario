@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Productos y Préstamos - Almacén</title>
+    <link rel="stylesheet" th:href="@{/css/styleISC.css}">
+</head>
+<body>
+    <header>Gestión de Productos y Préstamos - Almacén</header>
+
+    <!-- Botones de navegación -->
+    <div class="tab-buttons">
+        <button id="showProductos" class="tab-button active">Productos</button>
+        <button id="showPrestamos" class="tab-button">Préstamos</button>
+        <button id="showUsuarios" class="tab-button" style="display: none;">Usuarios</button>
+        <button id="showCategorias" class="tab-button" style="display: none;">Categorías</button>
+    </div>
+
+    <div class="main-container">
+        <!-- Sección de Productos -->
+        <div id="productosSection" class="section active">
+            <!-- Formulario de Productos -->
+            <div class="form-container">
+                <h2>Registro de Producto</h2>
+                <form id="productoForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nombre">Nombre:</label>
+                            <input type="text" id="nombre" name="nombre" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="categoria">Categoría:</label>
+                            <select id="categoria" name="categoria" required>
+                                <option value="">Seleccione</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="area">Área:</label>
+                            <select id="area" name="area" required>
+                                <option value="">Seleccione</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cantidadDisponible">Cantidad:</label>
+                            <input type="number" id="cantidadDisponible" name="cantidadDisponible" min="0" value="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="codigo">Código:</label>
+                            <input type="text" id="codigo" name="codigo" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="descripcion">Descripción:</label>
+                        <textarea id="descripcion" name="descripcion" required></textarea>
+                    </div>
+                    <button type="submit">Guardar Producto</button>
+                </form>
+            </div>
+            <!-- Tabla de Productos -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>Productos Registrados</h2>
+                    <input type="text" id="buscarProductos" placeholder="Buscar producto...">
+                    <select id="filtroCategoria" name="filtroCategoria">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Área</th>
+                            <th>Cantidad</th>
+                            <th>Descripción</th>
+                            <th>Código</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaProductos">
+                        <!-- Se llena con JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sección de Préstamos -->
+        <div id="prestamosSection" class="section" style="display: none;">
+            <!-- Formulario de Préstamos -->
+            <div class="form-container">
+                <h2>Registro de Préstamo</h2>
+                <form id="prestamoForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productoPrestamo">Producto:</label>
+                            <select id="productoPrestamo" name="producto" required>
+                                <option value="">Seleccione</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="alumno">Alumno:</label>
+                            <input type="text" id="alumno" name="alumno" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="noControl">No. Control:</label>
+                            <input type="text" id="noControl" name="noControl" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cantidadPrestamo">Cantidad:</label>
+                            <input type="number" id="cantidadPrestamo" name="cantidad" min="1" value="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="fechaPrestamo">Fecha Préstamo:</label>
+                            <input type="date" id="fechaPrestamo" name="fechaPrestamo" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="estado">Estado:</label>
+                            <select id="estado" name="estado" required>
+                                <option value="Prestado">Prestado</option>
+                                <option value="Devuelto">Devuelto</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fechaDevolucion">Fecha Devolución:</label>
+                            <input type="date" id="fechaDevolucion" name="fechaDevolucion">
+                        </div>
+                    </div>
+                    <button type="submit">Guardar Préstamo</button>
+                </form>
+            </div>
+            <!-- Tabla de Préstamos -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>Préstamos Registrados</h2>
+                    <input type="text" id="buscarPrestamos" placeholder="Buscar préstamo...">
+                    <select id="filtroEstado" name="filtroEstado">
+                        <option value="">Todos los estados</option>
+                        <option value="Prestado">Prestado</option>
+                        <option value="Devuelto">Devuelto</option>
+                    </select>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Alumno</th>
+                            <th>No. Control</th>
+                            <th>Cantidad</th>
+                            <th>Fecha Préstamo</th>
+                            <th>Fecha Devolución</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaPrestamos">
+                        <!-- Se llena con JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sección de Usuarios -->
+        <div id="usuariosSection" class="section" style="display: none;">
+            <!-- Formulario de Usuarios -->
+            <div class="form-container">
+                <h2>Registro de Usuario</h2>
+                <form id="usuarioForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nombreUsuario">Nombre:</label>
+                            <input type="text" id="nombreUsuario" name="nombre" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="apellidosUsuario">Apellidos:</label>
+                            <input type="text" id="apellidosUsuario" name="apellidos" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="rolUsuario">Rol:</label>
+                            <select id="rolUsuario" name="rol" required>
+                                <option value="">Seleccione</option>
+                                <option value="ADMIN">Admin</option>
+                                <option value="JEFECARRERA">Jefe de Carrera</option>
+                                <option value="ENCARGADO">Encargado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="carreraUsuario">Carrera:</label>
+                            <select id="carreraUsuario" name="carrera" required>
+                                <option value="">Seleccione</option>
+                                <option value="ISC">ISC</option>
+                                <option value="IGE">IGE</option>
+                                <option value="IA">IA</option>
+                                <option value="II">II</option>
+                                <option value="ALMACEN">Almacén</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="areaUsuario">Área:</label>
+                            <select id="areaUsuario" name="area" required>
+                                <option value="">Seleccione</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="telefonoUsuario">Teléfono:</label>
+                            <input type="text" id="telefonoUsuario" name="telefono">
+                        </div>
+                        <div class="form-group">
+                            <label for="emailUsuario">Email:</label>
+                            <input type="email" id="emailUsuario" name="email">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="usuarioNombre">Usuario:</label>
+                            <input type="text" id="usuarioNombre" name="usuario" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="passwordUsuario">Contraseña:</label>
+                            <input type="password" id="passwordUsuario" name="password" required>
+                        </div>
+                    </div>
+                    <button type="submit">Guardar Usuario</button>
+                </form>
+            </div>
+            <!-- Tabla de Usuarios -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>Usuarios Registrados</h2>
+                    <input type="text" id="buscarUsuarios" placeholder="Buscar usuario...">
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Apellidos</th>
+                            <th>Rol</th>
+                            <th>Carrera</th>
+                            <th>Área</th>
+                            <th>Teléfono</th>
+                            <th>Email</th>
+                            <th>Usuario</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaUsuarios">
+                        <!-- Se llena con JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sección de Categorías -->
+        <div id="categoriasSection" class="section" style="display: none;">
+            <!-- Formulario de Categorías -->
+            <div class="form-container">
+                <h2>Registro de Categoría</h2>
+                <form id="categoriaForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nombreCategoria">Nombre:</label>
+                            <input type="text" id="nombreCategoria" name="nombreCategoria" required>
+                        </div>
+                    </div>
+                    <button type="submit">Guardar Categoría</button>
+                </form>
+            </div>
+            <!-- Tabla de Categorías -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>Categorías Registradas</h2>
+                    <input type="text" id="buscarCategorias" placeholder="Buscar categoría...">
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaCategorias">
+                        <!-- Se llena con JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Modal de confirmación -->
+        <div id="modalConfirm" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2 id="modalTitle">Confirmar</h2>
+                <p id="modalMessage"></p>
+                <button id="modalConfirmBtn">Confirmar</button>
+                <button id="modalCancelBtn">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <script th:src="@{/js/jsProductos.js}"></script>
+</body>
+</html>

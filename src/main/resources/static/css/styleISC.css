@@ -1,0 +1,255 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+    color: #333;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background: linear-gradient(135deg, #0072BC, #0055A4); /* Azul TecNM + Azul ITST */
+    padding: 20px;
+    color: #fff;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.tab-buttons {
+    display: flex;
+    gap: 10px;
+    padding: 10px 20px;
+    justify-content: center;
+}
+
+.tab-button {
+    padding: 10px 20px;
+    background: #0072BC; /* Azul TecNM */
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.tab-button.active {
+    background: #0055A4; /* Azul ITST */
+}
+
+.tab-button:hover {
+    background: #0055A4; /* Azul ITST */
+}
+
+.main-container {
+    flex: 1;
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    overflow: auto;
+    box-sizing: border-box;
+}
+
+.section {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    width: 100%;
+}
+
+.form-container {
+    flex: 1;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.form-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #009739; /* Verde ITST */
+}
+
+.form-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+input, select, textarea {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+textarea {
+    resize: none;
+    height: 60px;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    background: #0072BC; /* Azul TecNM */
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+button:hover {
+    background: #0055A4; /* Azul ITST */
+}
+
+.table-container {
+    flex: 2;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    overflow-x: auto;
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.table-header input {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    width: 250px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+thead {
+    background: #0072BC; /* Azul TecNM */
+    color: #fff;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+tr:hover {
+    background: #f1f9ff;
+}
+
+.btn-action {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.btn-edit {
+    background: #009739; /* Verde ITST */
+    color: #fff;
+}
+
+.btn-delete {
+    background: #d62828;
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .tab-buttons {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 10px;
+    }
+
+    .main-container {
+        flex-direction: column;
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .section {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .form-row {
+        flex-direction: column;
+    }
+
+    .form-group {
+        width: 100%;
+    }
+
+    .table-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .table-header input,
+    .table-header select {
+        width: 100%;
+    }
+
+    .table-container {
+        padding: 10px;
+        overflow-x: auto;
+    }
+
+    .form-container {
+        padding: 15px;
+    }
+
+    table {
+        font-size: 0.85rem;
+        min-width: 600px; /* Evita que el contenido se desorganice */
+    }
+
+    button {
+        font-size: 0.95rem;
+        padding: 10px;
+    }
+
+    header {
+        font-size: 1.2rem;
+        padding: 15px;
+    }
+}

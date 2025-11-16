@@ -1,0 +1,1097 @@
+¿Puedes hacer que haya dos botones adicionales, igual que los de Producto y Préstamo, que se vayan mostrando y cambiando de la misma manera que ya está implementado?
+
+Un botón será para Agregar Usuario y el otro para Agregar Categoría.
+
+Ambos deberán abrir ventanas donde se pueda agregar, editar y eliminar registros, con una tabla similar a la que ya existe para facilitar el manejo.
+
+Estos dos botones deben mostrarse únicamente a los roles ADMIN y JEFECARRERA.
+
+En cuanto a los apartados de Productos y Préstamos, deben quedarse como están: visibles y editables para todos los roles (ADMIN, JEFECARRERA y ENCARGADO).
+
+En resumen: la única diferencia es que los dos nuevos botones (Usuario y Categoría) estarán restringidos a ADMIN y JEFECARRERA, mientras que lo demás permanece igual.
+package com.Almacen.SistemaInventario.Model.Enum;
+
+public enum Rol {
+    ADMIN,
+    JEFECARRERA,
+    ENCARGADO
+}
+
+package com.Almacen.SistemaInventario.Controller;
+
+import com.Almacen.SistemaInventario.Model.Usuario;
+import com.Almacen.SistemaInventario.Service.LoginService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/Tecnologico")
+public class LoginController {
+    @Autowired
+    private LoginService loginService;
+
+    @PostMapping("/Autenticar")
+    public Map<String, Object> autenticar(@RequestParam String usuario, @RequestParam String password) {
+        Map<String, Object> response = new HashMap<>();
+        Optional<Usuario> usuarioExiste = loginService.login(usuario, password);
+
+        if (usuarioExiste.isPresent()) {
+            Usuario u = usuarioExiste.get();
+            response.put("success", true);
+            response.put("edificio", u.getCarrera().toString());
+            response.put("idUsuario", u.getId_Usuario()); // Incluir id_Usuario
+            response.put("rol", u.getRol().toString());
+        } else {
+            response.put("success", false);
+            response.put("message", "Usuario o contraseña incorrectos");
+        }
+        return response;
+    }
+}
+
+package com.Almacen.SistemaInventario.Controller;
+
+import com.Almacen.SistemaInventario.DTO.EmpleadoDTO;
+import com.Almacen.SistemaInventario.Service.EmpleadoService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/Empleado")
+public class EmpleadoController {
+    @Autowired
+    private EmpleadoService empleadoService;
+
+    @GetMapping("/GetAllEmpleado")
+    public ResponseEntity<List<EmpleadoDTO>> getAllEmpleados() {
+        return new ResponseEntity<>(empleadoService.getEmpleado(), HttpStatus.OK);
+    }
+
+    @GetMapping("/GetEmpleado")
+    public ResponseEntity<EmpleadoDTO> getOne(@RequestParam(required = false) String nombre, @RequestParam(required = false) String apellidos) {
+        Optional<EmpleadoDTO> empleadoExiste = empleadoService.getEmpleadoEspecifico(nombre, apellidos);
+        return empleadoExiste.map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/Enviar")
+    public ResponseEntity<EmpleadoDTO> postEmpleado(@Valid @RequestBody EmpleadoDTO empleadoDTO) {
+        try {
+            EmpleadoDTO guardarEmpleado = empleadoService.saveEmpleado(empleadoDTO);
+            return new ResponseEntity<>(guardarEmpleado, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PutMapping("/ActualizaEmpleado")
+    public ResponseEntity<EmpleadoDTO> putEmpleado(@Valid @RequestBody EmpleadoDTO empleadoDTO, @RequestParam String nombre, @RequestParam String apellidos) {
+        try {
+            Optional<EmpleadoDTO> actualizaEmpleado = empleadoService.updateEmpleado(nombre, apellidos, empleadoDTO);
+            return actualizaEmpleado.map(dto -> new ResponseEntity<>(dto, HttpStatus.OK))
+                    .orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @DeleteMapping("/BorrarEmpleado")
+    public ResponseEntity<Void> deleteEmpleado(@RequestParam String nombre, @RequestParam String apellidos) {
+        boolean existe = empleadoService.deleteEmpleado(nombre,apellidos);
+        if(existe){
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+}
+
+package com.Almacen.SistemaInventario.Service;
+
+import com.Almacen.SistemaInventario.DTO.EmpleadoDTO;
+import com.Almacen.SistemaInventario.Mapper.EmpleadoMapper;
+import com.Almacen.SistemaInventario.Model.Empleado;
+import com.Almacen.SistemaInventario.Model.Usuario;
+import com.Almacen.SistemaInventario.Repository.EmpleadoRepository;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+public class EmpleadoService {
+
+    @Autowired
+    private EmpleadoRepository empleadoRepository;
+
+    @Autowired
+    private EmpleadoMapper empleadoMapper;
+
+    public List<EmpleadoDTO> getEmpleado() {
+        return empleadoRepository.findAll().stream().map(empleadoMapper::toDTO).collect(Collectors.toList());
+    }
+
+    public Optional<EmpleadoDTO> getEmpleadoEspecifico(String nombre, String apellido) {
+        return empleadoRepository.findByNombreAndApellidos(nombre, apellido).map(empleadoMapper::toDTO);
+    }
+
+    @Transactional
+    public EmpleadoDTO saveEmpleado(EmpleadoDTO empleadoDTO) {
+        if (empleadoDTO.getUsuario() == null || empleadoDTO.getUsuario().getUsuario() == null
+                || empleadoDTO.getUsuario().getPassword() == null || empleadoDTO.getUsuario().getRol() == null || empleadoDTO.getArea() == null) {
+            throw new IllegalArgumentException("El usuario, su contraseña y rol son obligatorios");
+        }
+        Empleado empleado = empleadoMapper.toEntity(empleadoDTO);
+        Empleado guardado = empleadoRepository.save(empleado);
+        return empleadoMapper.toDTO(guardado);
+    }
+
+    @Transactional
+    public Optional<EmpleadoDTO> updateEmpleado(String nombre, String apellido, EmpleadoDTO empleadoDTO) {
+        return empleadoRepository.findByNombreAndApellidos(nombre, apellido)
+                .map(empleado -> {
+                    if (empleadoDTO.getNombre() != null) {
+                        empleado.setNombre(empleadoDTO.getNombre());
+                    }
+                    if (empleadoDTO.getApellidos() != null) {
+                        empleado.setApellidos(empleadoDTO.getApellidos());
+                    }
+                    if (empleadoDTO.getRol() != null) {
+                        empleado.setRol(empleadoDTO.getRol());
+                    }
+                    if(empleadoDTO.getCarrera() != null){
+                        empleado.setCarrera(empleadoDTO.getCarrera());
+                    }
+                    if(empleadoDTO.getArea() != null){
+                        empleado.setArea(empleadoDTO.getArea());
+                    }
+                    if (empleadoDTO.getTelefono() != null) {
+                        empleado.setTelefono(empleadoDTO.getTelefono());
+                    }
+                    if (empleadoDTO.getEmail() != null) {
+                        empleado.setEmail(empleadoDTO.getEmail());
+                    }
+                    if (empleadoDTO.getUsuario() != null) {
+                        if (empleadoDTO.getUsuario().getUsuario() == null
+                                || empleadoDTO.getUsuario().getPassword() == null
+                                || empleadoDTO.getUsuario().getRol() == null) {
+                            throw new IllegalArgumentException("El usuario, su contraseña y rol son obligatorios");
+                        }
+                        Usuario usuario = empleado.getUsuario();
+                        if (usuario == null) {
+                            usuario = new Usuario();
+                            empleado.setUsuario(usuario);
+                            usuario.setEmpleado(empleado);
+                        }
+                        usuario.setUsuario(empleadoDTO.getUsuario().getUsuario());
+                        usuario.setPassword(empleadoDTO.getUsuario().getPassword());
+                        usuario.setRol(empleadoDTO.getUsuario().getRol());
+                        usuario.setCarrera(empleadoDTO.getCarrera());
+                        usuario.setArea(empleadoDTO.getArea());
+
+                    }
+                    Empleado empleadoActualizado = empleadoRepository.save(empleado);
+                    return empleadoMapper.toDTO(empleadoActualizado);
+                });
+    }
+
+    @Transactional
+    public boolean deleteEmpleado(String nombre, String apellido) {
+        Optional<Empleado> empleadoExiste = empleadoRepository.findByNombreAndApellidos(nombre, apellido);
+        if(empleadoExiste.isPresent()){
+            empleadoRepository.delete(empleadoExiste.get());
+            return true;
+        }
+        return false;
+    }
+}
+
+package com.Almacen.SistemaInventario.Controller;
+
+import com.Almacen.SistemaInventario.DTO.CategoriaDTO;
+import com.Almacen.SistemaInventario.Model.Enum.Area;
+import com.Almacen.SistemaInventario.Service.CategoriaService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/Categoria")
+public class CategoriaController {
+
+    @Autowired
+    private CategoriaService categoriaService;
+
+
+    @GetMapping("/GetAllCategoria")
+    public ResponseEntity<List<CategoriaDTO>> getAllCategoria(){
+        return new ResponseEntity<>(categoriaService.getCategoria(), HttpStatus.OK);
+    }
+
+    @GetMapping("/GetAllAreas")
+    public ResponseEntity<List<String>> getAllAreas() {
+        List<String> areas = Arrays.stream(Area.values())
+                .map(Enum::name)
+                .toList();
+        return new ResponseEntity<>(areas, HttpStatus.OK);
+    }
+
+    @PostMapping("/SaveCategoria")
+    public ResponseEntity<CategoriaDTO> saveCategoria(@Valid @RequestBody CategoriaDTO categoriaDTO){
+        try{
+            CategoriaDTO guardarCategoria = categoriaService.saveCategoria(categoriaDTO);
+            return new ResponseEntity<>(guardarCategoria,HttpStatus.OK);
+        }catch (IllegalArgumentException e){
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PutMapping("/UpdateCategoria")
+    public ResponseEntity<CategoriaDTO> updateCategoria(@Valid @RequestBody CategoriaDTO categoriaDTO, @RequestParam String nombreCategoria){
+        try {
+            Optional<CategoriaDTO> actualizarCategoria = categoriaService.updateCategoria(categoriaDTO, nombreCategoria);
+            return actualizarCategoria.map(dto -> new ResponseEntity<>(dto, HttpStatus.OK)).orElseGet(() -> ResponseEntity.notFound().build());
+        }catch (IllegalArgumentException e){
+            return  new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @DeleteMapping("/DeleteCategoria")
+    public ResponseEntity<Void> deleteCategoria(@RequestParam String nombreCategoria){
+        boolean eliminado = categoriaService.deleteCategoria(nombreCategoria);
+        if(eliminado){
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+}
+
+package com.Almacen.SistemaInventario.Service;
+
+import com.Almacen.SistemaInventario.DTO.CategoriaDTO;
+import com.Almacen.SistemaInventario.Mapper.CategoriaMapper;
+import com.Almacen.SistemaInventario.Model.Categoria;
+import com.Almacen.SistemaInventario.Repository.CategoriaRepository;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+public class CategoriaService {
+
+    @Autowired
+    private CategoriaRepository categoriaRepository;
+
+    @Autowired
+    private CategoriaMapper categoriaMapper;
+
+    public List<CategoriaDTO> getCategoria(){
+        return categoriaRepository.findAll().stream().map(categoriaMapper::toDTO).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public CategoriaDTO saveCategoria(CategoriaDTO categoriaDTO){
+        if(categoriaDTO.getNombreCategoria() == null){
+            throw new IllegalArgumentException("El nombre de la Categoria no puede ser nulo");
+        }
+
+        Categoria categoria = categoriaMapper.toEntity(categoriaDTO);
+        Categoria guardar = categoriaRepository.save(categoria);
+
+        return categoriaMapper.toDTO(guardar);
+    }
+
+    @Transactional
+    public Optional<CategoriaDTO> updateCategoria(CategoriaDTO categoriaDTO, String nombreCategoria) {
+        return categoriaRepository.findByNombreCategoria(nombreCategoria).map(categoria -> {
+            if(categoriaDTO.getNombreCategoria() != null){
+                categoria.setNombreCategoria(categoriaDTO.getNombreCategoria());
+            }
+
+            Categoria categoriaEdita = categoriaRepository.save(categoria);
+            return categoriaMapper.toDTO(categoriaEdita);
+        });
+    }
+
+    @Transactional
+    public boolean deleteCategoria(String nombreCategoria){
+        Optional<Categoria> categoria = categoriaRepository.findByNombreCategoria(nombreCategoria);
+        if(categoria.isPresent()){
+            categoriaRepository.delete(categoria.get());
+            return true;
+        }
+        return false;
+    }
+
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const productoForm = document.getElementById("productoForm");
+    const prestamoForm = document.getElementById("prestamoForm");
+    const categoriaSelect = document.getElementById("categoria");
+    const areaSelect = document.getElementById("area");
+    const productoPrestamoSelect = document.getElementById("productoPrestamo");
+    const tablaProductos = document.getElementById("tablaProductos");
+    const tablaPrestamos = document.getElementById("tablaPrestamos");
+    const buscarProductos = document.getElementById("buscarProductos");
+    const buscarPrestamos = document.getElementById("buscarPrestamos");
+    const filtroCategoria = document.getElementById("filtroCategoria");
+    const filtroEstado = document.getElementById("filtroEstado");
+    const showProductosBtn = document.getElementById("showProductos");
+    const showPrestamosBtn = document.getElementById("showPrestamos");
+    const productosSection = document.getElementById("productosSection");
+    const prestamosSection = document.getElementById("prestamosSection");
+    const modal = document.getElementById("modalConfirm");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalMessage = document.getElementById("modalMessage");
+    const modalConfirmBtn = document.getElementById("modalConfirmBtn");
+    const modalCancelBtn = document.getElementById("modalCancelBtn");
+    const closeModalBtn = document.querySelector(".close-modal");
+
+    // Verificar elementos del DOM
+    if (!productoForm) console.warn('Elemento productoForm no encontrado');
+    if (!prestamoForm) console.warn('Elemento prestamoForm no encontrado');
+    if (!categoriaSelect) console.warn('Elemento categoria no encontrado');
+    if (!areaSelect) console.warn('Elemento area no encontrado');
+    if (!productoPrestamoSelect) console.warn('Elemento productoPrestamo no encontrado');
+    if (!tablaProductos) console.warn('Elemento tablaProductos no encontrado');
+    if (!tablaPrestamos) console.warn('Elemento tablaPrestamos no encontrado');
+    if (!buscarProductos) console.warn('Elemento buscarProductos no encontrado');
+    if (!buscarPrestamos) console.warn('Elemento buscarPrestamos no encontrado');
+    if (!filtroCategoria) console.warn('Elemento filtroCategoria no encontrado');
+    if (!filtroEstado) console.warn('Elemento filtroEstado no encontrado');
+    if (!showProductosBtn) console.warn('Elemento showProductosBtn no encontrado');
+    if (!showPrestamosBtn) console.warn('Elemento showPrestamosBtn no encontrado');
+    if (!productosSection) console.warn('Elemento productosSection no encontrado');
+    if (!prestamosSection) console.warn('Elemento prestamosSection no encontrado');
+    if (!modal) console.warn('Elemento modalConfirm no encontrado');
+    if (!modalTitle) console.warn('Elemento modalTitle no encontrado');
+    if (!modalMessage) console.warn('Elemento modalMessage no encontrado');
+    if (!modalConfirmBtn) console.warn('Elemento modalConfirmBtn no encontrado');
+    if (!modalCancelBtn) console.warn('Elemento modalCancelBtn no encontrado');
+    if (!closeModalBtn) console.warn('Elemento close-modal no encontrado');
+
+    let productos = [];
+    let prestamos = [];
+    let categorias = [];
+    let areasUsuario = [];
+    let editarProductoId = null;
+    let editarPrestamoNoControl = null;
+
+    // Cargar categorías desde backend
+    async function cargarCategorias() {
+        try {
+            console.log('Iniciando carga de categorías...');
+            const response = await fetch('/Categoria/GetAllCategoria');
+            if (!response.ok) {
+                const errorText = `Error al cargar categorías: ${response.status} ${response.statusText}`;
+                console.error(errorText);
+                alert(errorText);
+                throw new Error(errorText);
+            }
+            categorias = await response.json();
+            console.log('Categorías cargadas:', categorias);
+
+            if (categoriaSelect) {
+                categoriaSelect.innerHTML = '<option value="">Seleccione</option>';
+                categorias.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.idCategoria;
+                    option.textContent = cat.nombreCategoria;
+                    categoriaSelect.appendChild(option);
+                });
+                console.log('Selector de categorías actualizado:', categoriaSelect.innerHTML);
+            }
+
+            if (filtroCategoria) {
+                filtroCategoria.innerHTML = '<option value="">Todas las categorías</option>';
+                categorias.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.idCategoria;
+                    option.textContent = cat.nombreCategoria;
+                    filtroCategoria.appendChild(option);
+                });
+                console.log('Selector de filtro de categorías actualizado:', filtroCategoria.innerHTML);
+            }
+        } catch (error) {
+            console.error('Error al cargar categorías:', error);
+            alert('Error al cargar categorías: ' + error.message);
+        }
+    }
+
+    // Cargar áreas del usuario desde backend
+    async function cargarAreasUsuario() {
+        try {
+            const carrera = localStorage.getItem('carrera');
+            console.log('Carrera desde localStorage:', carrera);
+            if (!carrera) {
+                console.warn('No se encontró carrera en localStorage');
+                alert('No se encontró carrera en localStorage. Por favor, inicia sesión nuevamente.');
+                if (areaSelect) {
+                    areaSelect.innerHTML = '<option value="">Seleccione</option>';
+                }
+                return;
+            }
+
+            console.log('Cargando áreas para carrera:', carrera);
+            const response = await fetch(`/Areas/GetUserAreas?carrera=${encodeURIComponent(carrera)}`);
+            if (!response.ok) {
+                const errorText = `Error al cargar áreas: ${response.status} ${response.statusText}`;
+                console.error(errorText);
+                alert(errorText);
+                throw new Error(errorText);
+            }
+            areasUsuario = await response.json();
+            console.log('Áreas cargadas:', areasUsuario);
+
+            if (areaSelect) {
+                areaSelect.innerHTML = '<option value="">Seleccione</option>';
+                areasUsuario.forEach(ar => {
+                    const option = document.createElement('option');
+                    option.value = ar;
+                    option.textContent = ar;
+                    areaSelect.appendChild(option);
+                });
+                console.log('Selector de áreas actualizado:', areaSelect.innerHTML);
+            }
+        } catch (error) {
+            console.error('Error al cargar áreas:', error);
+            alert('Error al cargar áreas: ' + error.message);
+        }
+    }
+
+    // Cargar productos desde backend
+    async function cargarProductos() {
+        try {
+            console.log('Iniciando carga de productos...');
+            const response = await fetch('/Productos/GetAllProductos');
+            if (!response.ok) {
+                const errorText = `Error al cargar productos: ${response.status} ${response.statusText}`;
+                console.error(errorText);
+                alert(errorText);
+                throw new Error(errorText);
+            }
+            const todosProductos = await response.json();
+            console.log('Productos totales:', todosProductos);
+
+            productos = todosProductos.filter(p => areasUsuario.includes(p.area));
+            console.log('Productos filtrados por área:', productos);
+            renderTablaProductos();
+            cargarProductosEnPrestamoSelect();
+        } catch (error) {
+            console.error('Error al cargar productos:', error);
+            alert('Error al cargar productos: ' + error.message);
+        }
+    }
+
+    // Cargar préstamos desde backend
+    async function cargarPrestamos() {
+        try {
+            console.log('Iniciando carga de préstamos...');
+            const response = await fetch('/Prestamo/GetAllPrestamo');
+            if (!response.ok) {
+                const errorText = `Error al cargar préstamos: ${response.status} ${response.statusText}`;
+                console.error(errorText);
+                alert(errorText);
+                throw new Error(errorText);
+            }
+            prestamos = await response.json();
+            console.log('Préstamos cargados:', prestamos);
+            renderTablaPrestamos();
+        } catch (error) {
+            console.error('Error al cargar préstamos:', error);
+            alert('Error al cargar préstamos: ' + error.message);
+        }
+    }
+
+    // Cargar productos en el select de préstamos
+    function cargarProductosEnPrestamoSelect() {
+        if (productoPrestamoSelect) {
+            productoPrestamoSelect.innerHTML = '<option value="">Seleccione</option>';
+            productos.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.idProducto;
+                option.textContent = `${p.nombre} (Disponible: ${p.cantidadDisponible})`;
+                productoPrestamoSelect.appendChild(option);
+            });
+            console.log('Selector de productos para préstamo actualizado:', productoPrestamoSelect.innerHTML);
+        }
+    }
+
+    // Obtener nombre de categoría por id
+    function obtenerNombreCategoria(idCategoria) {
+        const cat = categorias.find(c => c.idCategoria === idCategoria);
+        return cat ? cat.nombreCategoria : '-';
+    }
+
+    // Obtener nombre de producto por id
+    function obtenerNombreProducto(idProducto) {
+        const prod = productos.find(p => p.idProducto === idProducto);
+        return prod ? prod.nombre : '-';
+    }
+
+    // Verificar si el producto pertenece al área del usuario
+    function esProductoDeAreaUsuario(idProducto) {
+        return productos.some(p => p.idProducto === idProducto);
+    }
+
+    // Renderizar tabla de productos
+    function renderTablaProductos() {
+        if (tablaProductos) {
+            tablaProductos.innerHTML = "";
+            const searchTerm = buscarProductos ? buscarProductos.value.toLowerCase() : '';
+            const catFilter = filtroCategoria ? filtroCategoria.value : '';
+            productos
+                .filter(p => p.nombre.toLowerCase().includes(searchTerm) && (!catFilter || p.idCategoria == catFilter))
+                .forEach((p, index) => {
+                    const fila = `
+                    <tr>
+                        <td>${p.nombre}</td>
+                        <td>${obtenerNombreCategoria(p.idCategoria)}</td>
+                        <td>${p.area}</td>
+                        <td>${p.cantidadDisponible}</td>
+                        <td>${p.descripcion}</td>
+                        <td>${p.codigo}</td>
+                        <td>
+                            <button class="btn-action btn-edit" onclick="editarProducto(${index})">Editar</button>
+                            <button class="btn-action btn-delete" onclick="eliminarProducto(${index})">Eliminar</button>
+                        </td>
+                    </tr>`;
+                    tablaProductos.innerHTML += fila;
+                });
+            console.log('Tabla de productos renderizada con', productos.length, 'elementos');
+        }
+    }
+
+    // Renderizar tabla de préstamos
+    function renderTablaPrestamos() {
+        if (tablaPrestamos) {
+            tablaPrestamos.innerHTML = "";
+            const searchTerm = buscarPrestamos ? buscarPrestamos.value.toLowerCase() : '';
+            const estadoFilter = filtroEstado ? filtroEstado.value : '';
+            prestamos
+                .filter(p => esProductoDeAreaUsuario(p.producto) && // Filtrar por productos del área del usuario
+                        (p.alumno.toLowerCase().includes(searchTerm) || p.noControl.toLowerCase().includes(searchTerm)) && 
+                        (!estadoFilter || p.estado === estadoFilter))
+                .forEach((p, index) => {
+                    const fila = `
+                    <tr>
+                        <td>${obtenerNombreProducto(p.producto)}</td>
+                        <td>${p.alumno}</td>
+                        <td>${p.noControl}</td>
+                        <td>${p.cantidad}</td>
+                        <td>${p.fechaPrestamo}</td>
+                        <td>${p.fechaDevolucion || '-'}</td>
+                        <td><span class="status-badge ${p.estado.toLowerCase()}">${p.estado}</span></td>
+                        <td>
+                            <button class="btn-action btn-edit" onclick="editarPrestamo(${index})">Editar</button>
+                            <button class="btn-action btn-delete" onclick="eliminarPrestamo(${index})">Eliminar</button>
+                        </td>
+                    </tr>`;
+                    tablaPrestamos.innerHTML += fila;
+                });
+            console.log('Tabla de préstamos renderizada con', prestamos.length, 'elementos');
+        }
+    }
+
+    // Guardar o actualizar producto
+    productoForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const productoData = {
+            nombre: document.getElementById("nombre").value,
+            descripcion: document.getElementById("descripcion").value,
+            codigo: document.getElementById("codigo").value,
+            idCategoria: parseInt(categoriaSelect.value),
+            area: areaSelect.value,
+            cantidadDisponible: parseInt(document.getElementById("cantidadDisponible").value)
+        };
+
+        try {
+            let response;
+            if (editarProductoId) {
+                response = await fetch(`/Productos/UpdateProducto?id=${editarProductoId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(productoData)
+                });
+            } else {
+                response = await fetch('/Productos/SaveProducto', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(productoData)
+                });
+            }
+
+            if (response.ok) {
+                await cargarProductos();
+                productoForm.reset();
+                alert(editarProductoId ? "Producto actualizado correctamente" : "Producto guardado correctamente");
+                editarProductoId = null;
+            } else {
+                const errorText = await response.text();
+                console.error('Error al guardar producto:', errorText);
+                alert('Error al guardar producto: ' + errorText);
+            }
+        } catch (error) {
+            console.error('Error en la solicitud:', error);
+            alert('Error en la solicitud: ' + error.message);
+        }
+    });
+
+    // Guardar o actualizar préstamo
+    prestamoForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const idUsuario = localStorage.getItem('idUsuario');
+        console.log('ID de usuario desde localStorage:', idUsuario);
+
+        if (!idUsuario) {
+            alert('No se encontró el ID de usuario. Por favor, inicia sesión nuevamente.');
+            return;
+        }
+
+        const prestamoData = {
+            producto: parseInt(document.getElementById("productoPrestamo").value),
+            alumno: document.getElementById("alumno").value,
+            noControl: document.getElementById("noControl").value,
+            usuario: parseInt(idUsuario),
+            cantidad: parseInt(document.getElementById("cantidadPrestamo").value),
+            fechaPrestamo: document.getElementById("fechaPrestamo").value,
+            fechaDevolucion: document.getElementById("fechaDevolucion").value || null,
+            estado: document.getElementById("estado").value
+        };
+
+        console.log('Datos del préstamo a enviar:', prestamoData);
+
+        try {
+            let response;
+            if (editarPrestamoNoControl) {
+                response = await fetch(`/Prestamo/UpdatePrestamo?noControl=${editarPrestamoNoControl}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(prestamoData)
+                });
+            } else {
+                response = await fetch('/Prestamo/SavePrestamo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(prestamoData)
+                });
+            }
+
+            if (response.ok) {
+                await cargarPrestamos();
+                await cargarProductos();
+                prestamoForm.reset();
+                alert(editarPrestamoNoControl ? "Préstamo actualizado correctamente" : "Préstamo guardado correctamente");
+                editarPrestamoNoControl = null;
+            } else {
+                const errorText = await response.text();
+                console.error('Error al guardar préstamo:', errorText);
+                alert('Error al guardar préstamo: ' + errorText);
+            }
+        } catch (error) {
+            console.error('Error en la solicitud:', error);
+            alert('Error en la solicitud: ' + error.message);
+        }
+    });
+
+    // Eliminar producto
+    window.eliminarProducto = (index) => {
+        const p = productos[index];
+        if (modalTitle && modalMessage && modal) {
+            modalTitle.textContent = 'Confirmar Eliminación';
+            modalMessage.textContent = `¿Seguro que quieres eliminar ${p.nombre}?`;
+            modal.style.display = 'flex';
+        }
+
+        modalConfirmBtn.onclick = async () => {
+            try {
+                const response = await fetch(`/Productos/DeleteProducto?id=${p.idProducto}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    await cargarProductos();
+                    modal.style.display = 'none';
+                } else {
+                    const errorText = await response.text();
+                    console.error('Error al eliminar producto:', errorText);
+                    alert('No se pudo eliminar el producto: ' + errorText);
+                }
+            } catch (error) {
+                console.error('Error al eliminar:', error);
+                alert('Error al eliminar: ' + error.message);
+            }
+        };
+    };
+
+    // Eliminar préstamo
+    window.eliminarPrestamo = (index) => {
+        const p = prestamos[index];
+        if (!esProductoDeAreaUsuario(p.producto)) {
+            alert('No tienes permiso para eliminar este préstamo, ya que el producto no pertenece a tu área.');
+            return;
+        }
+
+        if (modalTitle && modalMessage && modal) {
+            modalTitle.textContent = 'Confirmar Eliminación';
+            modalMessage.textContent = `¿Seguro que quieres eliminar el préstamo de ${p.alumno}?`;
+            modal.style.display = 'flex';
+        }
+
+        modalConfirmBtn.onclick = async () => {
+            try {
+                const response = await fetch(`/Prestamo/DeletePrestamo?noControl=${p.noControl}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    await cargarPrestamos();
+                    await cargarProductos();
+                    modal.style.display = 'none';
+                } else {
+                    const errorText = await response.text();
+                    console.error('Error al eliminar préstamo:', errorText);
+                    alert('No se pudo eliminar el préstamo: ' + errorText);
+                }
+            } catch (error) {
+                console.error('Error al eliminar:', error);
+                alert('Error al eliminar: ' + error.message);
+            }
+        };
+    };
+
+    // Editar préstamo
+    window.editarPrestamo = (index) => {
+        const p = prestamos[index];
+        if (!esProductoDeAreaUsuario(p.producto)) {
+            alert('No tienes permiso para editar este préstamo, ya que el producto no pertenece a tu área.');
+            return;
+        }
+
+        document.getElementById("productoPrestamo").value = p.producto;
+        document.getElementById("alumno").value = p.alumno;
+        document.getElementById("noControl").value = p.noControl;
+        document.getElementById("cantidadPrestamo").value = p.cantidad;
+        document.getElementById("fechaPrestamo").value = p.fechaPrestamo;
+        document.getElementById("fechaDevolucion").value = p.fechaDevolucion || '';
+        document.getElementById("estado").value = p.estado;
+
+        editarPrestamoNoControl = p.noControl;
+    };
+
+    // Cambiar entre secciones
+    showProductosBtn.addEventListener('click', () => {
+        productosSection.style.display = 'flex';
+        prestamosSection.style.display = 'none';
+        showProductosBtn.classList.add('active');
+        showPrestamosBtn.classList.remove('active');
+        gsap.from("#productosSection .fade-in", { opacity: 0, y: 50, duration: 1, stagger: 0.2 });
+    });
+
+    showPrestamosBtn.addEventListener('click', () => {
+        prestamosSection.style.display = 'flex';
+        productosSection.style.display = 'none';
+        showPrestamosBtn.classList.add('active');
+        showProductosBtn.classList.remove('active');
+        gsap.from("#prestamosSection .fade-in", { opacity: 0, y: 50, duration: 1, stagger: 0.2 });
+    });
+
+    // Buscar y filtrar en productos
+    buscarProductos.addEventListener("input", renderTablaProductos);
+    filtroCategoria.addEventListener("change", renderTablaProductos);
+
+    // Buscar y filtrar en préstamos
+    buscarPrestamos.addEventListener("input", renderTablaPrestamos);
+    filtroEstado.addEventListener("change", renderTablaPrestamos);
+
+    // Cerrar modal
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            if (modal) modal.style.display = 'none';
+        });
+    }
+    if (modalCancelBtn) {
+        modalCancelBtn.addEventListener('click', () => {
+            if (modal) modal.style.display = 'none';
+        });
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal) modal.style.display = 'none';
+    });
+
+    // Inicializar
+    cargarCategorias().then(() => cargarAreasUsuario().then(() => {
+        cargarProductos();
+        cargarPrestamos();
+    }));
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById("loginForm");
+    if (loginForm) {
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const usuario = document.getElementById("usuario").value;
+            const password = document.getElementById("password").value;
+
+            const formData = new URLSearchParams();
+            formData.append("usuario", usuario);
+            formData.append("password", password);
+
+            try {
+                const response = await fetch("/Tecnologico/Autenticar", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+                console.log('Respuesta de /Tecnologico/Autenticar:', data); // Depuración
+
+                if (data.success) {
+                    localStorage.setItem('carrera', data.edificio);
+                    localStorage.setItem('idUsuario', data.idUsuario); // Guardar idUsuario
+                    localStorage.setItem('rol', data.rol); // Guardar rol
+                    switch (data.edificio) {
+                        case "ISC":
+                            window.location.href = "/Login/ISC";
+                            break;
+                        case "IGE":
+                            window.location.href = "/Login/IGE";
+                            break;
+                        case "IA":
+                            window.location.href = "/Login/IA";
+                            break;
+                        case "II":
+                            window.location.href = "/Login/II";
+                            break;
+                        case "ALMACEN":
+                            window.location.href = "/Login/ALMACEN";
+                            break;
+                        default:
+                            document.getElementById("mensaje").innerText = "No se encontró el edificio para este usuario";
+                    }
+                } else {
+                    document.getElementById("mensaje").innerText = data.message || "Usuario o contraseña incorrectos";
+                }
+            } catch (error) {
+                console.error("Error en autenticación:", error);
+                document.getElementById("mensaje").innerText = "Error en autenticación: " + error.message;
+            }
+        });
+    } else {
+        console.warn('Elemento loginForm no encontrado');
+    }
+});
+
+HAZLO SOLAMENTE CON JAVASCRIPT  Y LOS BOTONES QUE SEAN DE COLOR #0072BC;
+
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Productos y Préstamos - Almacén</title>
+    <link rel="stylesheet" th:href="@{/css/styleISC.css}">
+</head>
+<body>
+    <header>Gestión de Productos y Préstamos - Almacén</header>
+
+    <!-- Botones de navegación -->
+    <div class="tab-buttons">
+        <button id="showProductos" class="tab-button active">Productos</button>
+        <button id="showPrestamos" class="tab-button">Préstamos</button>
+    </div>
+
+    <div class="main-container">
+        <!-- Sección de Productos -->
+        <div id="productosSection" class="section active">
+            <!-- Formulario de Productos -->
+            <div class="form-container">
+                <h2>Registro de Producto</h2>
+                <form id="productoForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nombre">Nombre:</label>
+                            <input type="text" id="nombre" name="nombre" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="categoria">Categoría:</label>
+                            <select id="categoria" name="categoria" required>
+                                <option value="">Seleccione</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="area">Área:</label>
+                            <select id="area" name="area" required>
+                                <option value="">Seleccione</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cantidadDisponible">Cantidad:</label>
+                            <input type="number" id="cantidadDisponible" name="cantidadDisponible" min="0" value="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="codigo">Código:</label>
+                            <input type="text" id="codigo" name="codigo" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="descripcion">Descripción:</label>
+                        <textarea id="descripcion" name="descripcion" required></textarea>
+                    </div>
+
+                    <button type="submit">Guardar Producto</button>
+                </form>
+            </div>
+
+            <!-- Tabla de Productos -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>Productos Registrados</h2>
+                    <input type="text" id="buscarProductos" placeholder="Buscar producto...">
+                    <select id="filtroCategoria" name="filtroCategoria">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Área</th>
+                            <th>Cantidad</th>
+                            <th>Descripción</th>
+                            <th>Código</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaProductos">
+                        <!-- Se llena con JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sección de Préstamos -->
+        <div id="prestamosSection" class="section" style="display: none;">
+            <!-- Formulario de Préstamos -->
+            <div class="form-container">
+                <h2>Registro de Préstamo</h2>
+                <form id="prestamoForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productoPrestamo">Producto:</label>
+                            <select id="productoPrestamo" name="producto" required>
+                                <option value="">Seleccione</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="alumno">Alumno:</label>
+                            <input type="text" id="alumno" name="alumno" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="noControl">No. Control:</label>
+                            <input type="text" id="noControl" name="noControl" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cantidadPrestamo">Cantidad:</label>
+                            <input type="number" id="cantidadPrestamo" name="cantidad" min="1" value="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="fechaPrestamo">Fecha Préstamo:</label>
+                            <input type="date" id="fechaPrestamo" name="fechaPrestamo" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="estado">Estado:</label>
+                            <select id="estado" name="estado" required>
+                                <option value="Prestado">Prestado</option>
+                                <option value="Devuelto">Devuelto</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fechaDevolucion">Fecha Devolución:</label>
+                            <input type="date" id="fechaDevolucion" name="fechaDevolucion">
+                        </div>
+                    </div>
+
+                    <button type="submit">Guardar Préstamo</button>
+                </form>
+            </div>
+
+            <!-- Tabla de Préstamos -->
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>Préstamos Registrados</h2>
+                    <input type="text" id="buscarPrestamos" placeholder="Buscar préstamo...">
+                    <select id="filtroEstado" name="filtroEstado">
+                        <option value="">Todos los estados</option>
+                        <option value="Prestado">Prestado</option>
+                        <option value="Devuelto">Devuelto</option>
+                    </select>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Alumno</th>
+                            <th>No. Control</th>
+                            <th>Cantidad</th>
+                            <th>Fecha Préstamo</th>
+                            <th>Fecha Devolución</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaPrestamos">
+                        <!-- Se llena con JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Modal de confirmación -->
+        <div id="modalConfirm" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2 id="modalTitle">Confirmar</h2>
+                <p id="modalMessage"></p>
+                <button id="modalConfirmBtn">Confirmar</button>
+                <button id="modalCancelBtn">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <script th:src="@{/js/jsProductos.js}"></script>
+</body>
+</html>
+
+YA en los botones tiene el estilo que te dije solamente llamalos igual para que esten del mismo color
